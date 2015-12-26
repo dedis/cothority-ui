@@ -1,6 +1,6 @@
 ## Usuage
 
-You need a valid config.toml (see latest [release](https://github.com/dedis/cothority/releases/latest)) or create one by using [run_locally.sh](https://github.com/dedis/cothority/app/conode/run_locally.sh) if you are offline.
+You need a valid config.toml (see latest [release](https://github.com/dedis/cothority/releases/latest)) or create one by using [run_locally.sh](https://github.com/dedis/cothority/blob/development/app/conode/run_locally.sh) if you are offline.
 
 If you have a valid config you can run the server by
 ```
