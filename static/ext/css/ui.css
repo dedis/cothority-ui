@@ -1,3 +1,4 @@
-div.upload_container {
+div.main {
   max-width: 830px;
+  margin: 0 auto;
 }

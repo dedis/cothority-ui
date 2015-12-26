@@ -24,7 +24,8 @@
 </head>
 
 <body>
-  <h3>Collectively sign file</h3>
+  <div class="main">
+  <h3>Cothority: Collectively sign file</h3>
 
   <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
   <script src="static/ext/js/jquery-1.11.3.min.js"></script>
@@ -48,9 +49,11 @@
     </form>
   </div>
   <div id="signature_result" style="display: none;">
-    <h4>Signature</h4>
+    <h4>Signature &nbsp;<i title="verified" class="glyphicon glyphicon-ok"></i></h4>
     <pre id="json"></pre>
   </div>
+</div> <!-- End <div> main -->
+
   <script>
     $("#file-sign").fileinput({
       uploadUrl: "sign",
@@ -75,29 +78,7 @@
         $("div#signature_result").show();
         $("div#signature_result pre#json").append(JSON.stringify(data.response.data, null, 2));
     });
-
-
-    $("#submit-file").click(function(){
-      console.log("Submit button");
-      if(false) { // code below is only necessary for multiple files
-        var data = new FormData();
-        jQuery.each(jQuery('#file-sign')[0].files, function(i, file) {
-          data.append('file-'+i, file);
-        });
-        jQuery.ajax({
-            url: 'sign',
-            data: data,
-            cache: false,
-            contentType: false,
-            processData: false,
-            type: 'POST',
-            success: function(data){
-                alert(data);
-            }
-      });
-    }
-    });
-  </script>
+</script>
 
 </body>
 
