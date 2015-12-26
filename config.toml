@@ -1,0 +1,38 @@
+Suite = "Ed25519"
+Hosts = ["192.33.210.8:7770", "185.26.156.40:61116", "83.212.126.67:7770", "188.166.251.184:7770", "5.135.161.91:7770", "95.143.172.241:62306", "78.46.227.60:7770"]
+AggPubKey = "ezzI0jxS4revObuxvDsA4fzGxHnw35kMhkDlb1EDI2k="
+
+[Tree]
+  Name = "192.33.210.8:7770"
+  PriKey = ""
+  PubKey = "5ThA/lW6WgZNtb+WY1HnoxHWgZlR4dFy/AFNJ5jgmU4="
+
+  [[Tree.Children]]
+    Name = "185.26.156.40:61116"
+    PriKey = ""
+    PubKey = "ECpQAgvJhn/mN9QWCG2WLMBd9OEKIp0FtNvZyh++NQ4="
+
+    [[Tree.Children.Children]]
+      Name = "188.166.251.184:7770"
+      PriKey = ""
+      PubKey = "FCvtb8wk5h2ejeYvBQzkZTKIJ58qH5IFsI+/w0QRmYc="
+
+    [[Tree.Children.Children]]
+      Name = "5.135.161.91:7770"
+      PriKey = ""
+      PubKey = "afoh7cWrkEhnO3R5kH40P39rz19Me52Ly2F0owXdy+s="
+
+  [[Tree.Children]]
+    Name = "83.212.126.67:7770"
+    PriKey = ""
+    PubKey = "swcLRIjD+aI6cdgHzagJAHy85618UOKg0Bb5Lhe4Uv8="
+
+    [[Tree.Children.Children]]
+      Name = "95.143.172.241:62306"
+      PriKey = ""
+      PubKey = "OCnKc2M75fdCZ2a2tVroNKzRPjisysFaJISOh2bUgGk="
+
+    [[Tree.Children.Children]]
+      Name = "78.46.227.60:7770"
+      PriKey = ""
+      PubKey = "AhkdRTWU4+R1qzeZQ3WJP7V/zmbRlcuh/c4LAakuxlw="

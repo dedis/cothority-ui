@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+  <title>Cothority: Sign File</title>
+
+  <!-- Bootstrap -->
+  <link href="static/ext/css/bootstrap.min.css" rel="stylesheet">
+
+  <link href="static/ext/css/fileinput.min.css" rel="stylesheet">
+
+  <link href="static/ext/css/ui.css" rel="stylesheet">
+
+  <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+  <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+  <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+</head>
+
+<body>
+  <h3>Collectively sign file</h3>
+
+  <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+  <script src="static/ext/js/jquery-1.11.3.min.js"></script>
+  <!-- Include all compiled plugins (below), or include individual files as needed -->
+  <script src="static/ext/js/bootstrap.min.js"></script>
+  <!-- Fancy file input plugin -->
+  <script src="static/ext/js/fileinput.min.js"></script>
+
+  <p>Please, select a file which will be uploaded and collectively signed by the cothority.
+    <!-- The maximum allowed file size is 4 Mb. -->
+  </p>
+  <label class="control-label">Select File</label>
+  <div class="upload_container">
+    <form enctype="multipart/form-data" action="sign" method="post">
+      <input id="file-sign" name="file-sign" class="file" type="file" data-max-file-count="1">
+      <br>
+      <!--  Use extra button instead of plugins own upload button:
+      <button id="submit-file" type="submit" value="sign" class="btn btn-primary" disabled="disabled">
+        <i class="glyphicon glyphicon-upload"></i> &nbsp;Submit &amp; Sign
+      </button> -->
+    </form>
+  </div>
+  <div id="signature_result" style="display: none;">
+    <h4>Signature</h4>
+    <pre id="json"></pre>
+  </div>
+  <script>
+    $("#file-sign").fileinput({
+      uploadUrl: "sign",
+      showCaption: true,
+      showUpload: true,
+      uploadLabel: "Submit &amp; Sign",
+      uploadClass: "btn btn-success",
+      showRemove: false,
+      uploadAsync: true,
+      //maxFileSize: 4096,
+      maxFilesNum: 1,
+      showPreview: true,
+      previewSettings: { /** XXX maybe later **/ }
+    });
+
+    $('#file-sign').on('fileuploaded', function(event, data, previewId, index) {
+        var form = data.form, files = data.files, extra = data.extra,
+            response = data.response, reader = data.reader;
+        console.log('File uploaded triggered');
+        console.log(form);
+        console.log(data.response.data);
+        $("div#signature_result").show();
+        $("div#signature_result pre#json").append(JSON.stringify(data.response.data, null, 2));
+    });
+
+
+    $("#submit-file").click(function(){
+      console.log("Submit button");
+      if(false) { // code below is only necessary for multiple files
+        var data = new FormData();
+        jQuery.each(jQuery('#file-sign')[0].files, function(i, file) {
+          data.append('file-'+i, file);
+        });
+        jQuery.ajax({
+            url: 'sign',
+            data: data,
+            cache: false,
+            contentType: false,
+            processData: false,
+            type: 'POST',
+            success: function(data){
+                alert(data);
+            }
+      });
+    }
+    });
+  </script>
+
+</body>
+
+</html>
