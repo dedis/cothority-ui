@@ -42,14 +42,13 @@
     <form enctype="multipart/form-data" action="sign" method="post">
       <input id="file-sign" name="file-sign" class="file" type="file" data-max-file-count="1">
       <br>
-      <!--  Use extra button instead of plugins own upload button:
-      <button id="submit-file" type="submit" value="sign" class="btn btn-primary" disabled="disabled">
-        <i class="glyphicon glyphicon-upload"></i> &nbsp;Submit &amp; Sign
-      </button> -->
     </form>
   </div>
   <div id="signature_result" style="display: none;">
     <h4>Signature &nbsp;<i title="verified" class="glyphicon glyphicon-ok"></i></h4>
+    <a id="download_sig" href="" download="" class="btn btn-default">
+      <span class="glyphicon glyphicon-download"></span>Download Signature
+    </a>
     <pre id="json"></pre>
   </div>
 </div> <!-- End <div> main -->
@@ -65,18 +64,22 @@
       uploadAsync: true,
       //maxFileSize: 4096,
       maxFilesNum: 1,
+      multiple: false,
       showPreview: true,
       previewSettings: { /** XXX maybe later **/ }
     });
 
     $('#file-sign').on('fileuploaded', function(event, data, previewId, index) {
-        var form = data.form, files = data.files, extra = data.extra,
-            response = data.response, reader = data.reader;
+        // var form = data.form, files = data.files, extra = data.extra,
+        //     response = data.response, reader = data.reader;
         console.log('File uploaded triggered');
-        console.log(form);
+        console.log(data);
         console.log(data.response.data);
+        var sigString = JSON.stringify(data.response.data, null, 2);
+        $("div#signature_result pre#json").append(sigString);
+        $("#download_sig").attr("href", "data:text/plain;charset=UTF-8,"+encodeURIComponent(sigString));
+        $("#download_sig").attr("download", data.files[0].name + "_sig.json");
         $("div#signature_result").show();
-        $("div#signature_result pre#json").append(JSON.stringify(data.response.data, null, 2));
     });
 </script>
 
