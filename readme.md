@@ -6,4 +6,4 @@ If you have a valid config you can run the server by
 ```
 go run main.go
 ```
-and visit http://localhost:9090/start in your browser.
+and visit [http://localhost:9090/start](http://localhost:9090/start) in your browser.
