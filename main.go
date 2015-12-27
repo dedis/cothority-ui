@@ -3,15 +3,18 @@ package main
 import (
 	"bytes"
 	"encoding/base64"
+	b64 "encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/dedis/cothority/lib/app"
 	"github.com/dedis/cothority/lib/conode"
 	"github.com/dedis/cothority/lib/dbg"
+	"github.com/dedis/cothority/lib/hashid"
 	"github.com/dedis/crypto/abstract"
 	//"html/template"
 	"log"
@@ -86,10 +89,39 @@ func sign(w http.ResponseWriter, r *http.Request) {
 			}{err.Error()})
 			fmt.Fprint(w, string(b))
 		} else {
+			type rData struct {
+				SuiteStr  string `json:"suite"`
+				Filename  string `json:"filename"`
+				TimeStamp string `json:"timestamp"`
+
+				Proof      []string `json:"proof"`
+				MerkleRoot string   `json:"merkleRoot"`
+
+				Challenge string `json:"challenge"`
+				Response  string `json:"response"`
+				AggCommit string `json:"aggCommit"`
+				AggPublic string `json:"aggPublic"`
+			}
+			prfStrings := make([]string, len((*sig).Prf))
+			for i, p := range []hashid.HashId((*sig).Prf) {
+				prfStrings[i] = b64.StdEncoding.EncodeToString(p[:])
+			}
+			data := rData{
+				(*sig).SuiteStr,
+				handler.Filename,
+				strconv.FormatInt(((*sig).Timestamp), 10),
+
+				prfStrings,
+				b64.StdEncoding.EncodeToString((*sig).MerkleRoot[:]),
+				// TODO also base64 encoded? String() might go away...
+				(*sig).Challenge.String(),
+				(*sig).Response.String(),
+				(*sig).AggCommit.String(),
+				(*sig).AggPublic.String(),
+			}
 			b, _ := json.Marshal(struct {
-				// TODO nice short preview of the signature & make it downloadable for the user
-				Signature conode.StampSignature `json:"data"`
-			}{*sig})
+				Data rData `json:"data"`
+			}{data})
 
 			fmt.Fprintln(w, string(b))
 		}

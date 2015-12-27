@@ -69,6 +69,7 @@
       previewSettings: { /** XXX maybe later **/ }
     });
 
+
     $('#file-sign').on('fileuploaded', function(event, data, previewId, index) {
         // var form = data.form, files = data.files, extra = data.extra,
         //     response = data.response, reader = data.reader;
@@ -76,9 +77,11 @@
         console.log(data);
         console.log(data.response.data);
         var sigString = JSON.stringify(data.response.data, null, 2);
+        var filename = data.files[0].name;
+        //$("div#signature_result pre#json").append("\nSignature for file '" + filename + "':\n");
         $("div#signature_result pre#json").append(sigString);
         $("#download_sig").attr("href", "data:text/plain;charset=UTF-8,"+encodeURIComponent(sigString));
-        $("#download_sig").attr("download", data.files[0].name + "_sig.json");
+        $("#download_sig").attr("download", filename + "_sig.json");
         $("div#signature_result").show();
     });
 </script>
