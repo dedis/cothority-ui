@@ -3,25 +3,25 @@ package main
 import (
 	"bytes"
 	"encoding/base64"
-	b64 "encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"os"
-	"strconv"
+	"runtime"
 	"strings"
 
 	"github.com/dedis/cothority/lib/app"
 	"github.com/dedis/cothority/lib/conode"
 	"github.com/dedis/cothority/lib/dbg"
-	"github.com/dedis/cothority/lib/hashid"
 	"github.com/dedis/crypto/abstract"
 	//"html/template"
 	"log"
 	"net/http"
+	"net/http/fcgi"
 )
 
-var listenPort = ":9090"
+// XXX make this a commandline flag
+var appAddr string
 
 /****** Copy & Paste from stamp.go ******/
 
@@ -33,9 +33,6 @@ const defaultConfigFile = "config.toml"
 // using the script app/conode/run_locally.sh and copy it to the top-level dir
 // of this project:
 //const defaultConfigFile = "local.toml"
-
-// extension given to a signature file
-const sigExtension = ".sig"
 
 // Our crypto-suite used in the program
 var suite abstract.Suite
@@ -49,6 +46,9 @@ var public_X0 abstract.Point
 /******END: Copy & Paste from stamp.go ******/
 
 func init() {
+	runtime.GOMAXPROCS(runtime.NumCPU())
+	appAddr = os.Getenv("APP_ADDR") // e.g. "0.0.0.0:8080" or ""
+
 	conf = new(app.ConfigConode)
 	if err := app.ReadTomlConfig(conf, defaultConfigFile); err != nil {
 		fmt.Printf("Couldn't read configuration file: %v", err)
@@ -61,8 +61,7 @@ func init() {
 }
 
 func sign(w http.ResponseWriter, r *http.Request) {
-	r.ParseForm() //Parse url parameters passed, then parse the response packet for the POST body (request body)
-	// attention: If you do not call ParseForm method, the following data can not be obtained form
+	r.ParseForm()
 	if r.Method == "GET" {
 		http.ServeFile(w, r, "static/sign.html")
 	} else {
@@ -72,77 +71,33 @@ func sign(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", jsonType)
 		}
 
-		// TODO return JSON (modify post in JS  to use ajax first)
 		r.ParseMultipartForm(32 << 20)
 		file, handler, err := r.FormFile("file-sign")
 		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		defer file.Close()
-		//fmt.Fprintf(w, "%v", handler.Header)
-		var sig *conode.StampSignature
-		sig, err = stampFile(file, handler.Filename)
-		if err != nil {
-			b, _ := json.Marshal(struct {
-				Error_ string `json:"error"`
-			}{err.Error()})
-			fmt.Fprint(w, string(b))
-		} else {
-			type rData struct {
-				SuiteStr  string `json:"suite"`
-				Filename  string `json:"filename"`
-				TimeStamp string `json:"timestamp"`
-
-				Proof      []string `json:"proof"`
-				MerkleRoot string   `json:"merkleRoot"`
-
-				Challenge string `json:"challenge"`
-				Response  string `json:"response"`
-				AggCommit string `json:"aggCommit"`
-				AggPublic string `json:"aggPublic"`
-			}
-			prfStrings := make([]string, len((*sig).Prf))
-			for i, p := range []hashid.HashId((*sig).Prf) {
-				prfStrings[i] = b64.StdEncoding.EncodeToString(p[:])
-			}
-			data := rData{
-				(*sig).SuiteStr,
-				handler.Filename,
-				strconv.FormatInt(((*sig).Timestamp), 10),
-
-				prfStrings,
-				b64.StdEncoding.EncodeToString((*sig).MerkleRoot[:]),
-				// TODO also base64 encoded? String() might go away...
-				(*sig).Challenge.String(),
-				(*sig).Response.String(),
-				(*sig).AggCommit.String(),
-				(*sig).AggPublic.String(),
-			}
-			b, _ := json.Marshal(struct {
-				Data rData `json:"data"`
-			}{data})
-
+			b, _ := MarshalErrorJSON(err)
 			fmt.Fprintln(w, string(b))
 		}
-
-		// f, err := os.OpenFile("./test/"+handler.Filename, os.O_WRONLY|os.O_CREATE, 0666)
-		// if err != nil {
-		// 	fmt.Println(err)
-		// 	return
-		// }
-		// defer f.Close()
-		// io.Copy(f, file)
-
-		// fmt.Println(r.Form) // print information on server side.
-		// fmt.Println("path", r.URL.Path)
-		// fmt.Println("scheme", r.URL.Scheme)
-		// fmt.Println(r.Form["form_name"])
-		// for k, v := range r.Form {
-		// 	fmt.Println("key:", k)
-		// 	fmt.Println("val:", strings.Join(v, ""))
-		// }
-		// fmt.Fprintf(w, "TODO: call conode to generate signature") // write data to response
+		defer file.Close()
+		sig, err := stampFile(file, handler.Filename)
+		if err != nil {
+			b, _ := MarshalErrorJSON(err)
+			fmt.Fprintln(w, string(b))
+		} else {
+			var err error
+			var b []byte
+			var data *SignatureData
+			data, err = NewSignatureData(sig, handler.Filename)
+			if err != nil {
+				b, _ = MarshalErrorJSON(err)
+			}
+			b, err = json.Marshal(struct {
+				Data SignatureData `json:"data"`
+			}{*data})
+			if err != nil {
+				b, _ = MarshalErrorJSON(err)
+			}
+			fmt.Fprintln(w, string(b))
+		}
 	}
 }
 
@@ -150,11 +105,10 @@ func verify(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("method:", r.Method) //get request method
 	r.ParseForm()
 	if r.Method == "GET" {
-		//
+		http.ServeFile(w, r, "static/verify.html")
 	} else {
 		r.ParseForm()
-		// logic part of log in
-		fmt.Println("username:", r.Form["username"])
+		fmt.Fprintln(w, "{error: 'Not implemented'}")
 	}
 }
 func landing(w http.ResponseWriter, r *http.Request) {
@@ -162,6 +116,7 @@ func landing(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	// fcgi: https://github.com/bsingr/golang-apache-fastcgi/blob/master/examples/vanilla/hello_world.go
 	http.HandleFunc("/start", landing)
 	http.HandleFunc("/sign", sign) // setting router rule
 	http.HandleFunc("/verify", verify)
@@ -169,9 +124,14 @@ func main() {
 	fs := http.FileServer(http.Dir("static"))
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
 
-	err := http.ListenAndServe(listenPort, nil) // setting listening port
+	var err error
+	if appAddr != "" { // Run as a local web server
+		err = http.ListenAndServe(appAddr, nil) // setting listening port
+	} else { // run over FCGI via standard I/O
+		err = fcgi.Serve(nil, nil)
+	}
 	if err != nil {
-		log.Fatal("ListenAndServe: ", err)
+		log.Fatal("Could not serve: ", err)
 	}
 }
 
@@ -199,7 +159,7 @@ func stampFile(filestream io.Reader, origFilename string) (*conode.StampSignatur
 }
 
 // modified version of hashFile from stamp.go to handle io.Reader instead of
-// (filename string); in other words does not write to filesystem
+// (filename string); in other words: it does not write to the filesystem
 func hashFile(file io.Reader) []byte {
 	hash := suite.Hash()
 	buflen := 1024 * 1024
