@@ -6,6 +6,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"mime/multipart"
+	"strconv"
+
 	"os"
 	"runtime"
 	"strings"
@@ -71,7 +75,6 @@ func sign(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", jsonType)
 		}
 
-		r.ParseMultipartForm(32 << 20)
 		file, handler, err := r.FormFile("file-sign")
 		if err != nil {
 			b, _ := MarshalErrorJSON(err)
@@ -83,6 +86,7 @@ func sign(w http.ResponseWriter, r *http.Request) {
 			b, _ := MarshalErrorJSON(err)
 			fmt.Fprintln(w, string(b))
 		} else {
+			//log.Printf("Signature: %v", sig)
 			var err error
 			var b []byte
 			var data *SignatureData
@@ -102,23 +106,83 @@ func sign(w http.ResponseWriter, r *http.Request) {
 }
 
 func verify(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("method:", r.Method) //get request method
 	r.ParseForm()
 	if r.Method == "GET" {
 		http.ServeFile(w, r, "static/verify.html")
 	} else {
-		r.ParseForm()
-		fmt.Fprintln(w, "{error: 'Not implemented'}")
+		w.Header().Set("Cache-Control", "no-cache")
+		jsonType := "application/json"
+		if strings.Index(r.Header.Get("Accept"), jsonType) != -1 {
+			w.Header().Set("Content-Type", jsonType)
+		}
+
+		r.ParseMultipartForm(32 << 20)
+		if r.MultipartForm != nil && r.MultipartForm.File != nil {
+			if fhs := r.MultipartForm.File["file-verify[]"]; len(fhs) == 2 {
+				log.Println("parsed multipart form")
+				var origFile, signatureFile multipart.File
+				var err error
+				var b []byte
+				var sigData SignatureData
+				origFile, err = fhs[0].Open()
+				if err != nil {
+					b, _ = MarshalErrorJSON(err)
+					fmt.Fprintln(w, string(b))
+					return
+				}
+				log.Println("opened orig file")
+				signatureFile, err = fhs[1].Open()
+				if err != nil {
+					b, _ = MarshalErrorJSON(err)
+					fmt.Fprintln(w, string(b))
+					return
+				}
+				log.Println("opened and unmarshaled signature file")
+				var sigBytes []byte
+				sigBytes, err = ioutil.ReadAll(signatureFile)
+				if err != nil {
+					b, _ = MarshalErrorJSON(err)
+					fmt.Fprintln(w, string(b))
+					return
+				}
+				err = json.Unmarshal(sigBytes, &sigData)
+				if err != nil {
+					b, _ = MarshalErrorJSON(err)
+					fmt.Fprintln(w, string(b))
+					return
+				}
+				var stampSig *conode.StampSignature
+				stampSig, err = sigData.ConvertToStampSignature()
+				// log.Printf("Signature: %v", stampSig)
+				if err != nil {
+					b, _ = MarshalErrorJSON(err)
+					fmt.Fprintln(w, string(b))
+					return
+				}
+				ok := verifyFilestreamSignature(origFile, *stampSig)
+				resp, _ := json.Marshal(struct {
+					Ok bool `json:"validSignature"`
+				}{ok})
+				fmt.Fprintln(w, string(resp))
+			} else {
+				resp, _ := json.Marshal(ErrorData{"Expected 2 files but received " + strconv.Itoa(len(fhs))})
+				fmt.Fprintln(w, string(resp))
+			}
+		} else {
+			resp, _ := json.Marshal(ErrorData{"Invalid POST data."})
+			fmt.Fprintln(w, string(resp))
+		}
 	}
 }
+
 func landing(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "static/landing.html")
 }
 
 func main() {
-	// fcgi: https://github.com/bsingr/golang-apache-fastcgi/blob/master/examples/vanilla/hello_world.go
+	// XXX all static files could be handled by the web-server instead of FCGI
 	http.HandleFunc("/start", landing)
-	http.HandleFunc("/sign", sign) // setting router rule
+	http.HandleFunc("/sign", sign)
 	http.HandleFunc("/verify", verify)
 
 	fs := http.FileServer(http.Dir("static"))
@@ -174,4 +238,11 @@ func hashFile(file io.Reader) []byte {
 		hash.Write(buf)
 	}
 	return hash.Sum(nil)
+}
+
+func verifyFilestreamSignature(filestream io.Reader, signature conode.StampSignature) bool {
+	// TODO get filestream for orig file:
+	hash := hashFile(filestream)
+	// Then verify the proper signature
+	return conode.VerifySignature(suite, &signature, public_X0, hash)
 }

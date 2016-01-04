@@ -13,6 +13,8 @@
 
   <link href="static/ext/css/fileinput.min.css" rel="stylesheet">
 
+  <link href="static/ui.css" rel="stylesheet">
+
   <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
   <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
   <!--[if lt IE 9]>
@@ -22,7 +24,8 @@
 </head>
 
 <body>
-  <h3>Collectively sign file</h3>
+  <div class="main">
+  <h3>Verify File Signature</h3>
 
   <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
   <script src="static/ext/js/jquery-1.11.3.min.js"></script>
@@ -31,25 +34,26 @@
   <!-- Fancy file input plugin -->
   <script src="static/ext/js/fileinput.min.js"></script>
 
-  <p>Please, select a file and its signature (filename.sig). The signature will then be verified.
+  <p>Please, select a file and its signature (filename_sig.json). The signature will then be verified.
     <!-- The maximum allowed file size is 4 Mb. -->
   </p>
   <label class="control-label">Select File</label>
-  <form enctype="multipart/form-data">
-    <input id="file-verify" class="file" type="file" data-max-file-count="1">
-    <br>
-    <button id="submit-file" type="submit" class="btn btn-primary" disabled="disabled">
-      <i class="glyphicon glyphicon-upload"></i> &nbsp;Submit &amp; Sign
-    </button>
+  <form enctype="multipart/form-data" method="POST">
+    <input id="file-verify" name="file-verify[]" class="file" type="file" data-max-file-count="2" multiple="multiple">
   </form>
 
   <script>
     $("#file-verify").fileinput({
+      uploadUrl: "verify",
       showCaption: true,
-      showUpload: false,
+      showUpload: true,
+      uploadLabel: "Submit &amp; Verify",
+      uploadClass: "btn btn-success",
       showRemove: false,
+      uploadAsync: false,
       //maxFileSize: 4096,
       minFilesNum: 2,
+      maxFileCount: 2,
       maxFilesNum: 2,
       showPreview: true,
       previewSettings: { /** XXX maybe later **/ }
@@ -57,14 +61,9 @@
 
     $('#file-verify').on('fileloaded', function(event, file, previewId, index, reader) {
       // TODO only enable if there are two files: one named foo.bar and the other foo.bar.sig
-      $('#submit-file').prop('disabled', false);
-    });
-
-    $('#file-verify').on('fileclear', function(event, file, previewId, index, reader) {
-      $('#submit-file').prop('disabled', true);
     });
   </script>
-
+</div>
 </body>
 
 </html>
