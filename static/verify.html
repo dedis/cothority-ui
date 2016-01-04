@@ -41,6 +41,9 @@
   <form enctype="multipart/form-data" method="POST">
     <input id="file-verify" name="file-verify[]" class="file" type="file" data-max-file-count="2" multiple="multiple">
   </form>
+  <div id="signature_result">
+    <h3>Signature: &nbsp;<i title="Upload file and its signature to see if it's valid." class="glyphicon glyphicon-question-sign"></i></h3>
+  </div>
 
   <script>
     $("#file-verify").fileinput({
@@ -53,14 +56,47 @@
       uploadAsync: false,
       //maxFileSize: 4096,
       minFilesNum: 2,
+      maxFilesCount: 2,
       maxFileCount: 2,
       maxFilesNum: 2,
       showPreview: true,
       previewSettings: { /** XXX maybe later **/ }
     });
 
-    $('#file-verify').on('fileloaded', function(event, file, previewId, index, reader) {
+    $('#file-verify').on('filebatchpreupload', function(event, data, previewId, index) {
       // TODO only enable if there are two files: one named foo.bar and the other foo.bar.sig
+      // and validate that the
+      var valid = (data.files.length == 2);
+      if(valid) {
+        // TODO validate names and check that the 2nd file is actually a signature
+        // data.files[1].name ;
+        // data.files[1].Blob ...
+      }
+      if (!valid) {
+       return {
+           message: 'You need to provide the original file and the signature file (in this order).',
+           //data: {key1: 'Key 1', detail1: 'Detail 1'}
+       };
+      }
+    });
+
+    $('#file-verify').on('filebatchuploadsuccess', function(event, data, previewId, index) {
+        console.log('filebatchuploadsuccess triggered');
+        // console.log(data);
+        var icon = $('div#signature_result i');
+        if(data.response.validSignature) {
+          icon.removeClass('glyphicon-question-sign');
+          icon.removeClass('glyphicon-thumbs-down');
+          icon.addClass('glyphicon-thumbs-up');
+          icon.css('color', 'green');
+          icon.prop('title', 'Valid Signature for file');
+        } else {
+          icon.removeClass('glyphicon-question-sign');
+          icon.removeClass('glyphicon-thumbs-up');
+          icon.addClass('glyphicon-thumbs-down');
+          icon.css('color', 'red');
+          icon.prop('title', 'Invalid Signature for file');
+        }
     });
   </script>
 </div>
