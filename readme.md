@@ -1,3 +1,5 @@
+**⚠️ This app uses an older version of cothority and is no longer maintained.**
+
 ## Usage
 
 You need a valid config.toml (see latest [release](https://github.com/dedis/cothority/releases/latest)) or create one by using [run_locally.sh](https://github.com/dedis/cothority/blob/development/app/conode/run_locally.sh) if you are offline.
